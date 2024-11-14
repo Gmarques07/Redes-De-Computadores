@@ -1,46 +1,39 @@
 from socket import socket, AF_INET, SOCK_STREAM
 from threading import Thread
 
-
-def enviar_mensagens(s):
-    while True:
-        try:
-            mensagem = input("Digite sua mensagem para o servidor: ")
-            s.send(mensagem.encode())
-        except BrokenPipeError:
-            print("Conexão com o servidor foi interrompida.")
-            break
-        except KeyboardInterrupt:
-            print("Encerrando o cliente.")
-            s.close()
-            break
-
-def escutar_mensagens(s):
+def escutar_servidor(s):
     while True:
         try:
             mensagem = s.recv(1500)
             if not mensagem:
                 print("Conexão com o servidor encerrada.")
-                s.close()
                 break
             print(f'Mensagem recebida do servidor: {mensagem.decode()}')
         except ConnectionResetError:
             print("Servidor desconectado.")
+            break
+
+def enviar_para_servidor(s):
+    while True:
+        try:
+            mensagem = input("Digite sua mensagem para o servidor: ")
+            s.send(mensagem.encode())
+        except BrokenPipeError:
+            print("Conexão com o servidor foi perdida.")
+            break
+        except KeyboardInterrupt:
+            print("Finalizando o cliente.")
             s.close()
             break
 
-def main():
-    s = socket(AF_INET, SOCK_STREAM)
-    try:
-        s.connect(('127.0.0.1', 8000))
-        print('Conectado ao servidor na porta 8000')
+s = socket(AF_INET, SOCK_STREAM)
+s.connect(('127.0.0.1', 8000))
 
-        # Iniciar threads para enviar e escutar mensagens
-        Thread(target=enviar_mensagens, args=(s,)).start()
-        Thread(target=escutar_mensagens, args=(s,)).start()
-    except ConnectionRefusedError:
-        print("Servidor não está disponível. Tente novamente mais tarde.")
-        s.close()
 
-if __name__ == "__main__":
-    main()
+nome_cliente = input("Digite seu nome: ")
+s.send(nome_cliente.encode())
+
+print(f'Conectado ao servidor na porta 8000 como {nome_cliente}')
+
+Thread(target=escutar_servidor, args=(s,)).start()
+Thread(target=enviar_para_servidor, args=(s,)).start()
